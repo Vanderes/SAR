@@ -7,14 +7,15 @@ public class BrokerManager {
     
     HashMap <String, Broker> brokers;
 
-    static BrokerManager getSelf(){
+    public static BrokerManager getSelf(){
         return self;
-    };
+    }
+
     static {
         self = new BrokerManager();
     };
 
-    private BrokerManager() {
+    BrokerManager() {
         brokers = new HashMap<String,Broker>();
     };
 
