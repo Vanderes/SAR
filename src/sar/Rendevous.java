@@ -1,41 +1,57 @@
 package sar;
 
-import java.util.concurrent.locks.ReentrantLock;
+import java.util.List;
 
 public class Rendevous {
     Broker ac;
     Broker cc;
-    private final ReentrantLock lock = new ReentrantLock();
+    CircularBuffer CB1;
+    CircularBuffer CB2;
+    Channel chAccept;
+    Channel chConnect;
+
 
     Rendevous(Broker a, Broker c){
         ac = null;
         cc = null;
+        CB1 = new CircularBuffer(Channel.CAPACITY);
+        CB2 = new CircularBuffer(Channel.CAPACITY);
+        chAccept = new Channel(CB2, CB1);
+        chConnect = new Channel(CB1, CB2);
+        chAccept.addRemote(chConnect);
+        chConnect.addRemote(chAccept);
     };
-    synchronized void setAc(Broker broker) {
-        ac = broker;
-        lock.notifyAll();
-    }
 
-    synchronized void setCc(Broker broker) {
-        cc = broker;
-        lock.notifyAll();
-    }
-
-    synchronized boolean waitForBothBrokers() throws InterruptedException {
+    synchronized void waitForBothBrokers() throws InterruptedException {
         while (ac == null || cc == null) {
-            lock.wait();
+            System.out.println("... waitForBoth:  waiting ...");
+            try {wait();} catch (InterruptedException e) {};
         }
-        return true;
+        notifyAll();
+        System.out.println("... waitForBoth:  both present ...");
     }
 
     Channel accept(Broker b) throws InterruptedException {
-        setAc(b);
-        return waitForBothBrokers() ? new Channel() : null;
+        synchronized (this) {
+            System.out.println("... accept rdv:  set AC ...");
+            ac = b;
+            notifyAll();
+        }
+        System.out.println("... accept rdv:  waitForBoth ...");
+        waitForBothBrokers();
+        return chAccept;
     }
 
     Channel connect(Broker b) throws InterruptedException {
-        setCc(b);
-        return waitForBothBrokers() ? new Channel() : null;
+        synchronized (this) {
+            System.out.println("... connect rdv:  set CC ...");
+            cc = b;
+            notifyAll();
+        }
+        System.out.println("... connect rdv:  waitForBoth ...");
+        waitForBothBrokers();
+        
+        return chConnect;
     }
 
 }

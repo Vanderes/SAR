@@ -1,7 +1,7 @@
 package sar;
 public class Task extends Thread {
 
-  static Broker broker;
+  Broker broker;
   Runnable runnable;
 
   Task(Broker b, Runnable r){
@@ -15,7 +15,8 @@ public class Task extends Thread {
   }
 
   public static Broker getBroker(){
-    return broker;
-    
-  };   
+    var currentThread = Thread.currentThread();
+    return ((Task) currentThread).broker;
+  }
+
 }
