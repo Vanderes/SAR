@@ -47,20 +47,18 @@ public class echoServer {
 
                 //SERVER READ
                 byte[] lengthMessage = new byte[1];  
+                System.out.println("... echoServer: trying to read ...");
                 int read = 0;
-            
-                while (read == 0){
-                    synchronized (channel.out) {
-                        System.out.println("... echoServer: trying to read ...");
-                        try{
-                            read = channel.read(lengthMessage, 0, 1);
-                            System.out.println("... echoServer: read: " + read);
-                        }
-                        catch (IOException e){
-                            //nothing;
-                        };
+                while (read == 0){    
+                    try{
+                        read = channel.read(lengthMessage, 0, 1);
+                        System.out.println("... echoServer: read ...");
                     }
-                }
+                    catch (IOException e){
+                        //nothing;
+                    };
+                }        
+                
 
                 System.out.println("... echoServer: received Message length: " + lengthMessage[0]);
 
@@ -71,17 +69,16 @@ public class echoServer {
                 byte[] message = new byte[lengthToRead];
 
                 while(offsetRead < lengthMessage[0]){
-                    synchronized (channel.out) {
-                        System.out.println("... echoServer: reading ...");
-                        try{
-                            lengthRead = channel.read(message, offsetRead, lengthToRead);
-                            lengthToRead -= lengthRead;
-                            offsetRead += lengthRead;
-                            System.out.println("... echoServer: read " + offsetRead + " of " + lengthMessage[0] + " ...");
-                        } catch (IOException e) { 
-                            // nothing
-                        };
-                    }
+                    System.out.println("... echoServer: reading ...");
+                    try{
+                        lengthRead = channel.read(message, offsetRead, lengthToRead);
+                        lengthToRead -= lengthRead;
+                        offsetRead += lengthRead;
+                        System.out.println("... echoServer: read " + offsetRead + " of " + lengthMessage[0] + " ...");
+                    } catch (IOException e) { 
+                        // nothing
+                    };
+                    
                 }
             
                 // SERVER WRITE
@@ -89,31 +86,27 @@ public class echoServer {
                     System.out.println("... echoServer: received message: " + new String(message, StandardCharsets.UTF_8) + " ...");
                     int written = 0;
                     while (written ==0){
-                        synchronized (channel.in){
-                            try {
-                                System.out.println("... echoServer: writing lengthMessage ...");
-                                written = channel.write(lengthMessage, 0, 1);
-                                System.out.println("... echoServer: written" + written + " ...");
-                            } catch (IOException e){
-                                //nothing
-                            }
+                        try {
+                            System.out.println("... echoServer: writing lengthMessage ...");
+                            written = channel.write(lengthMessage, 0, 1);
+                            System.out.println("... echoServer: written" + written + " ...");
+                        } catch (IOException e){
+                            //nothing
                         }
                     }
                     int lengthWritten = 0;
                     int lengthToWrite = message.length;
                     int offset = 0;
                     while(offset < message.length){
-                        synchronized (channel.in) {
-                            try {
-                                System.out.println("... echoServer: writing ...");
-                                lengthWritten = channel.write(message, offset, lengthToWrite);
-                                lengthToWrite -= lengthWritten;
-                                offset+= lengthWritten;
-                                System.out.println("... echoServer: written" + offset + " of " + message.length + " ...");
-                            } catch (IOException e) {
-                                //nothing
-                            };
-                        }
+                        try {
+                            System.out.println("... echoServer: writing ...");
+                            lengthWritten = channel.write(message, offset, lengthToWrite);
+                            lengthToWrite -= lengthWritten;
+                            offset+= lengthWritten;
+                            System.out.println("... echoServer: written" + offset + " of " + message.length + " ...");
+                        } catch (IOException e) {
+                            //nothing
+                        };
                     }
                 } 
                 /* else{
@@ -152,22 +145,21 @@ public class echoServer {
                 // } catch (IOException e) {
                 //     return;
                 // }
-
+                
                 String inputString = "Hello World!";
                 byte[] message = inputString.getBytes(StandardCharsets.UTF_8);
+                // byte[] message = buffer;
                 
                 // CLIENT WRITE
                 byte[] lengthMessage = {(byte) message.length};
                 int written = 0;
                 while (written ==0){
-                    synchronized (channel.in){
-                        try {
-                            System.out.println("... echoClient: writing lengthMessage ...");
-                            written = channel.write(lengthMessage, 0, 1);
-                            System.out.println("... echoClient: written" + written + " ...");
-                        } catch (IOException e){
-                            //nothing
-                        }
+                    try {
+                        System.out.println("... echoClient: writing lengthMessage ...");
+                        written = channel.write(lengthMessage, 0, 1);
+                        System.out.println("... echoClient: written" + written + " ...");
+                    } catch (IOException e){
+                        //nothing
                     }
                 }
 
@@ -175,17 +167,15 @@ public class echoServer {
                 int lengthToWrite = message.length;
                 int offset = 0;
                 while(offset < message.length){
-                    synchronized (channel.in){
-                        try {
-                            System.out.println("... echoClient: writing ...");
-                            lengthWritten = channel.write(message, offset, lengthToWrite);
-                            lengthToWrite -= lengthWritten;
-                            offset+= lengthWritten;
-                            System.out.println("... echoClient: written" + offset + " of " + message.length + " ...");
-                        } catch (IOException e) {
-                            //nothing
-                        };
-                    }
+                    try {
+                        System.out.println("... echoClient: writing ...");
+                        lengthWritten = channel.write(message, offset, lengthToWrite);
+                        lengthToWrite -= lengthWritten;
+                        offset+= lengthWritten;
+                        System.out.println("... echoClient: written" + offset + " of " + message.length + " ...");
+                    } catch (IOException e) {
+                        //nothing
+                    };
                 }
 
 
@@ -193,28 +183,24 @@ public class echoServer {
                 lengthMessage = new byte[1];
                 int read = 0;
                 while (read == 0){
-                    synchronized (channel.out){
-                        try{
-                            read = channel.read(lengthMessage, 0, 1);
-                        } catch (IOException e) { 
-                            // nothing
-                        };
-                    }
+                    try{
+                        read = channel.read(lengthMessage, 0, 1);
+                    } catch (IOException e) { 
+                        // nothing
+                    };
                 }
 
                 int lengthToRead = lengthMessage[0];
                 int lengthRead = 0;
                 int offsetRead = 0;
                 while(offsetRead < lengthMessage[0]){
-                    synchronized (channel.out){
-                        try{
-                        lengthRead = channel.read(message, offsetRead, lengthToRead);
-                        lengthToRead -= lengthRead;
-                        offsetRead += lengthRead;
-                        } catch (IOException e) { 
-                            // nothing
-                        };
-                    }
+                    try{
+                    lengthRead = channel.read(message, offsetRead, lengthToRead);
+                    lengthToRead -= lengthRead;
+                    offsetRead += lengthRead;
+                    } catch (IOException e) { 
+                        // nothing
+                    };
                 }      
                 System.out.println(new String(message, StandardCharsets.UTF_8));  
             }

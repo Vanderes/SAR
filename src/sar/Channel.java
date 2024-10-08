@@ -21,21 +21,31 @@ public class Channel {
     disconnected = false;
   }
 
-  public synchronized int read(byte[] bytes, int offset, int length) throws IOException{
+  public int read(byte[] bytes, int offset, int length) throws IOException{
     if (disconnected){
       throw new IOException("channel is disconnected");
     }
     else if (rch.disconnected){
       throw new IOException("channel is dangling");
     }
-    int i = 0;
-    while(i < length) { 
-    try{
-        bytes[offset + i] = out.pull();
-        i += 1;
-    } catch (IllegalStateException e) {
-        return i;
+
+    if (out.empty()){
+      synchronized (this) {
+        try{wait();}catch(InterruptedException e){};
+      }
     }
+
+    int i = 0;
+    synchronized (this){
+      while(i < length) { 
+        try{
+            bytes[offset + i] = out.pull();
+            notifyAll();
+            i += 1;
+        } catch (IllegalStateException e) {
+            return i;
+        }
+      }
     }
     return i;
   };
@@ -48,13 +58,22 @@ public class Channel {
       throw new IOException("channel is dangling");
     }
 
+    if (in.full()){
+      synchronized (this) {
+        try{wait(1000);}catch(InterruptedException e){};
+      }
+    }
+
     int i = 0;
-    while(i < length) { 
-      try{
-        in.push(bytes[offset + i]);
-        i += 1;
-      } catch (IllegalStateException e) {
-          return i;
+    synchronized (this){
+      while(i < length) { 
+        try{
+          in.push(bytes[offset + i]);
+          notifyAll();
+          i += 1;
+        } catch (IllegalStateException e) {
+            return i;
+        }
       }
     }
     return i;
