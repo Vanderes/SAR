@@ -31,7 +31,7 @@ public class Channel {
 
     if (out.empty()){
       synchronized (this) {
-        try{wait();}catch(InterruptedException e){};
+        try{wait(1000);}catch(InterruptedException e){};
       }
     }
 
