@@ -24,31 +24,25 @@ public class Rendevous {
 
     synchronized void waitForBothBrokers() throws InterruptedException {
         while (ac == null || cc == null) {
-            System.out.println("... waitForBoth:  waiting ...");
             try {wait();} catch (InterruptedException e) {};
         }
         notifyAll();
-        System.out.println("... waitForBoth:  both present ...");
     }
 
     Channel accept(Broker b) throws InterruptedException {
         synchronized (this) {
-            System.out.println("... accept rdv:  set AC ...");
             ac = b;
             notifyAll();
         }
-        System.out.println("... accept rdv:  waitForBoth ...");
         waitForBothBrokers();
         return chAccept;
     }
 
     Channel connect(Broker b) throws InterruptedException {
         synchronized (this) {
-            System.out.println("... connect rdv:  set CC ...");
             cc = b;
             notifyAll();
         }
-        System.out.println("... connect rdv:  waitForBoth ...");
         waitForBothBrokers();
         
         return chConnect;

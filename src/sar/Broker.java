@@ -25,14 +25,12 @@ public class Broker {
     Rendevous rdv = rdvMap.get(port);
     synchronized (this) {
       if (rdv == null) {
-        System.out.println("... accept:  creating rendevous ...");
         rdv = new Rendevous(this, null);
         rdvMap.put(port, rdv);
       }
       else if (rdv.ac != null) {
           throw new IllegalStateException("Busy on port" + port);
       }
-      System.out.println("... accept:  notify ...");
       notifyAll();
     }
     return rdv.accept(this);
@@ -45,17 +43,14 @@ public class Broker {
     Rendevous rdv = rBroker.rdvMap.get(port);
     synchronized (this) {
       while (rdv == null){
-        System.out.println("... connect:  wait for rendevous ...");
         try{wait(1000);} 
         catch(InterruptedException e){
-          System.out.println("... connect:  awake ...");
         };
         rdv = rBroker.rdvMap.get(port);
       }
       if (rdv.cc != null) {
           throw new IllegalStateException("Broker " + name + " is busy on port" + port);
       }
-      System.out.println("... connect:  rendevous found: connect rdv ...");
     }
     return rdv.connect(this);
   }
