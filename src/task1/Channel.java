@@ -1,4 +1,4 @@
-package sar;
+package task1;
 
 import java.io.IOException;
 
@@ -7,7 +7,7 @@ public class Channel {
   CircularBuffer in;
   CircularBuffer out;
   Channel rch;
-  Boolean disconnected;
+  public Boolean disconnected;
 
   public static final int CAPACITY = 5;
 
@@ -81,7 +81,7 @@ public class Channel {
 
   };
   
-  void disconnect(){
+  public void disconnect(){
     disconnected = true;
     rch = null;
   };

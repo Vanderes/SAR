@@ -1,4 +1,4 @@
-package sar;
+package task1;
 
 import java.util.HashMap;
 
@@ -8,20 +8,20 @@ public class Broker {
   String brokerName;
   HashMap <Integer, Rendevous> rdvMap;
 
-  Broker(String name){
+  public Broker(String name){
     brokerName = name;
     brokerManager = BrokerManager.getSelf();
     brokerManager.add(this);
     rdvMap = new HashMap<Integer, Rendevous>();
   };
-  String getName(){
+  public String getName(){
     return brokerName;
   };
-  BrokerManager getBrokerManager(){
+  public BrokerManager getBrokerManager(){
     return brokerManager;
   };
 
-  Channel accept(int port) throws InterruptedException, IllegalStateException {
+  public Channel accept(int port) throws InterruptedException, IllegalStateException {
     Rendevous rdv = rdvMap.get(port);
     synchronized (this) {
       if (rdv == null) {
@@ -38,7 +38,7 @@ public class Broker {
 
 
 
-  Channel connect(String name, int port) throws InterruptedException, IllegalStateException{
+  public Channel connect(String name, int port) throws InterruptedException, IllegalStateException{
     Broker rBroker = brokerManager.get(name);
     Rendevous rdv = rBroker.rdvMap.get(port);
     synchronized (this) {

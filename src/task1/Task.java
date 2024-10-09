@@ -1,10 +1,10 @@
-package sar;
+package task1;
 public class Task extends Thread {
 
   Broker broker;
   Runnable runnable;
 
-  Task(Broker b, Runnable r){
+  public Task(Broker b, Runnable r){
     broker = b;
     runnable = r;
   };
