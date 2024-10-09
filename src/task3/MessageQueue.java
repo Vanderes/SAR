@@ -6,6 +6,10 @@ public class MessageQueue {
     Listener listener;
     Channel channel;
 
+    public MessageQueue(Channel channel){
+        this.channel = channel;
+    }
+
     interface Listener {
         void received(byte[] msg);
         void sent(Message msg);

@@ -2,12 +2,13 @@ package task3;
 import task1.*;
 import task2.*;
 
-class TaskEvent {
+class TaskEvent extends Thread{
+    
     
     void post(Runnable r){
         //TODO
     };
-    static TaskEvent taskE(){
+    static TaskEvent taskEvent(){
         //TODO;
         return new TaskEvent();
     };
