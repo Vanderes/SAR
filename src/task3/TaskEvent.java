@@ -3,13 +3,12 @@ import task1.*;
 import task2.*;
 
 class TaskEvent extends Thread{
-    
-    
+    QueueBroker queueBroker;
+    EventPump eventPump;
     void post(Runnable r){
         //TODO
     };
-    static TaskEvent taskEvent(){
-        //TODO;
+    static TaskEvent taskEvent(QueueBroker queueBroker){
         return new TaskEvent();
     };
     void kill(){

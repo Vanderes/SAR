@@ -2,17 +2,19 @@ package task3;
 import java.util.HashMap;
 
 import task1.*;
-import task2.*;
+//import task2.*;
 
 public class QueueBroker {
     Broker broker;
     String name;
-    HashMap <Integer, Acceptor> acceptors;
+    HashMap <Integer, Acceptor> acceptorMap;
+    HashMap <Integer, Connector> connectorMap;
 
     QueueBroker(String name, Broker broker){
         this.name = name;
         this.broker = broker;
-        this.acceptors = new HashMap<>();
+        this.acceptorMap = new HashMap<>();
+        this.connectorMap = new HashMap<>();
     };
 
     class Acceptor implements Runnable{
@@ -65,22 +67,63 @@ public class QueueBroker {
         }
     }
 
+    class Connector implements Runnable{
+        boolean run;
+        int port;
+        ConnectListener listener;
+        String name;
+
+        Connector(String name, int port, ConnectListener listener){
+            this.port = port;
+            this.listener=listener;
+            this.name = name;
+            run=true;
+        }
+        void stop(){run=false;}
+
+        @Override
+        public void run(){
+            Channel channel;
+            TaskEvent currentTaskEvent = (TaskEvent)Thread.currentThread();
+            try {
+                channel = broker.connect(name, port);
+                final Channel finalChannel = channel;
+                currentTaskEvent.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        MessageQueue mq = new MessageQueue(finalChannel);
+                        listener.connected(mq);
+                    }}
+                );
+            } catch (IllegalStateException e) {
+                listener.refused();
+            } catch (InterruptedException e) {
+                listener.refused();
+            }
+        }
+
+    }
 
 
     interface AcceptListener {
         void accepted(MessageQueue queue);
     }
+
+    interface ConnectListener {
+        void connected(MessageQueue queue);
+        void refused();
+    }
     
     boolean bind(int port, AcceptListener listener){
         Acceptor acceptor = new Acceptor(port, listener);
         task1.Task acceptorTask = new task1.Task(broker, acceptor);
-        acceptors.put(port, acceptor);
+        acceptorMap.put(port, acceptor);
         acceptorTask.start();
         return true;
     };
+
     boolean unbind(int port){
-        //todo
-        Acceptor acceptor = acceptors.get(port);
+        Acceptor acceptor = acceptorMap.get(port);
         if (acceptor == null) {
             return false;
         }
@@ -88,13 +131,11 @@ public class QueueBroker {
         return true;
     };
     
-    interface ConnectListener {
-        void connected(MessageQueue queue);
-        void refused();
-    }
-    
     boolean connect(String name, int port, ConnectListener listener){
-        //todo
+        Connector connector = new Connector(name, port, listener);
+        task1.Task connectorTask = new task1.Task(broker, connector);
+        connectorMap.put(port, connector);
+        connectorTask.start();
         return true;
     };
 }
