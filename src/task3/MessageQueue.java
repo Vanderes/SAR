@@ -12,13 +12,13 @@ public class MessageQueue {
 
     interface Listener {
         void received(byte[] msg);
-        void sent(Message msg);
+        void sent(byte[] msg);
         void closed();
     }
     void setListener(Listener l){
         this.listener = l;
     };
-    boolean send(Message msg){
+    boolean send(byte[] message, int offset, int length, Listener l){
         //TODO
         return true;
     };

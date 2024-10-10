@@ -4,13 +4,20 @@ import task2.*;
 
 class TaskEvent extends Thread{
     QueueBroker queueBroker;
-    EventPump eventPump;
+    Runnable runnable;
+
+    public TaskEvent(QueueBroker queueBroker, Runnable runnable) {
+        this.queueBroker = queueBroker;
+        this.runnable = runnable;
+    }
     void post(Runnable r){
         //TODO
     };
-    static TaskEvent taskEvent(QueueBroker queueBroker){
-        return new TaskEvent();
-    };
+
+    // static TaskEvent taskEvent(QueueBroker queueBroker){
+    //     return new TaskEvent();
+    // };
+
     void kill(){
         //TODO
     };

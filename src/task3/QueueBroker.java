@@ -32,19 +32,18 @@ public class QueueBroker {
         @Override
         public void run(){
             Channel channel;
-            TaskEvent currentTaskEvent = (TaskEvent)Thread.currentThread();
             while(run){
                 try {
                     channel = broker.accept(port);
                     final Channel finalChannel = channel;
-                    currentTaskEvent.post(new Runnable() {
+                    EventPump.getInstance().post(new Runnable() {
 
                         @Override
                         public void run() {
                             MessageQueue mq = new MessageQueue(finalChannel);
                             listener.accepted(mq);
-                        }}
-                    );
+                        }
+                    });
                 } catch (IllegalStateException e) {
                     //nothing
                 } catch (InterruptedException e) {
@@ -84,11 +83,10 @@ public class QueueBroker {
         @Override
         public void run(){
             Channel channel;
-            TaskEvent currentTaskEvent = (TaskEvent)Thread.currentThread();
             try {
                 channel = broker.connect(name, port);
                 final Channel finalChannel = channel;
-                currentTaskEvent.post(new Runnable() {
+                EventPump.getInstance().post(new Runnable() {
                     @Override
                     public void run() {
                         MessageQueue mq = new MessageQueue(finalChannel);
