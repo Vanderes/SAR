@@ -1,8 +1,9 @@
 package task3;
+
 import java.util.HashMap;
 
 import task1.*;
-//import task2.*;
+import task2.*;
 
 public class QueueBroker {
     Broker broker;
