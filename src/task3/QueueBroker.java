@@ -3,7 +3,6 @@ package task3;
 import java.util.HashMap;
 
 import task1.*;
-import task2.*;
 
 public class QueueBroker {
     Broker broker;
@@ -41,7 +40,7 @@ public class QueueBroker {
 
                         @Override
                         public void run() {
-                            MessageQueue mq = new MessageQueue(finalChannel);
+                            MessageQueue mq = new MessageQueue(finalChannel, broker);
                             listener.accepted(mq);
                         }
                     });
@@ -90,7 +89,7 @@ public class QueueBroker {
                 EventPump.getInstance().post(new Runnable() {
                     @Override
                     public void run() {
-                        MessageQueue mq = new MessageQueue(finalChannel);
+                        MessageQueue mq = new MessageQueue(finalChannel, broker);
                         listener.connected(mq);
                     }}
                 );
@@ -138,3 +137,19 @@ public class QueueBroker {
         return true;
     };
 }
+
+// class qbAcceptListener implements Acceptlistener{
+//     public void accepted(MessageQueue queue){
+
+//     };
+// }
+
+// class qbConnectListener implements ConnectListener{
+
+//     public void connected(MessageQueue queue){
+
+//     };
+//     public void refused(){
+
+//     };
+// }

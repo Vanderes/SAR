@@ -31,6 +31,7 @@ public class Channel {
 
     if (out.empty()){
       synchronized (this) {
+        System.out.println("...reading");
         try{wait(1000);}catch(InterruptedException e){};
       }
     }

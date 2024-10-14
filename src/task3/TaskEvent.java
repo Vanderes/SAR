@@ -1,6 +1,5 @@
 package task3;
-import task1.*;
-import task2.*;
+
 
 class TaskEvent extends Thread{
     QueueBroker queueBroker;
@@ -25,4 +24,8 @@ class TaskEvent extends Thread{
         //TODO
         return true;
     };
+    public static QueueBroker getQueueBroker(){
+    var currentThread = Thread.currentThread();
+    return ((TaskEvent) currentThread).queueBroker;
+  }
     }

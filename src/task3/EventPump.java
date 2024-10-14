@@ -6,7 +6,9 @@ import java.util.List;
 
 public class EventPump extends Thread {
     List<Runnable> pumpList;
+    Object lock = new Object();
     static EventPump instance;
+
     
     private EventPump() {
         this.pumpList = new LinkedList<Runnable>();
@@ -14,8 +16,11 @@ public class EventPump extends Thread {
 
     public static EventPump getInstance() {
         if (EventPump.instance == null) {
+            System.out.println("EVENTPUMP BEING CREATED");
             EventPump.instance = new EventPump();
+            EventPump.instance.start();
         }
+
         return EventPump.instance;
     }
 
@@ -23,23 +28,27 @@ public class EventPump extends Thread {
     public synchronized void run() {
         Runnable nextEvent;
         while(true) {
-            if(!pumpList.isEmpty()){
-                nextEvent = pumpList.removeFirst();
-                nextEvent.run();
-            } else {
-                sleep();
+            synchronized (lock) {
+                if(!pumpList.isEmpty()){
+                    System.out.println("... EVENTPUMP running event ... ");
+                    System.out.println("... pump size befor:" + pumpList.size());
+                    nextEvent = pumpList.removeFirst();
+                    System.out.println("... pump size after:" + pumpList.size());
+                    nextEvent.run();
+                    lock.notify();
+                } else {
+                    System.out.println("... EVENTPUMP waiting ...");
+                    try {lock.wait(2000);} catch (InterruptedException e) {}
+                }
             }
         }
     }
-    public synchronized void post(Runnable event) {
-        pumpList.add(event);
-        notify();
-    }
-    private void sleep() {
-        try {
-            wait();
-        } catch (InterruptedException ex){
-        // nothing to do here.
-    }
+    public void post(Runnable event) {
+        System.out.println("... trying to post... ");
+        synchronized (lock) {
+            lock.notify();
+            System.out.println("... EVENTPUMP adding event ...");
+            pumpList.add(event);
+        }
     }
 }
