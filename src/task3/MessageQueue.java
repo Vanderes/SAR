@@ -10,7 +10,7 @@ public class MessageQueue {
 
     class Sender implements Runnable{
         final Channel channel;
-        Listener listener;
+        final Listener listener;
         final byte[] messageBytes;
         final int messageOffset;
         final int messageLength;
@@ -20,7 +20,9 @@ public class MessageQueue {
             this.messageBytes = bytes;
             this.messageOffset = offset;
             this.messageLength = length;
+            this.listener = listener;
         }
+
         @Override
         public void run(){
             byte[] messageLengthByte = {(byte)messageLength};
@@ -60,20 +62,23 @@ public class MessageQueue {
         void sent(byte[] msg);
         void closed();
     }
+
     void setListener(Listener l){
         this.listener = l;
-    };
+    }
+
     boolean send(byte[] message, int offset, int length, Listener l){
         Sender sender = new Sender(channel, l, message, offset, length);
         sender.run();
     return true;
-    };
+    }
+
     void close(){
-        //TODO
-    };
+        channel.disconnect();
+    }
+
     boolean closed(){
-        //TODO
-        return true;
+        return channel.disconnected;
     };
 }
 
