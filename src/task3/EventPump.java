@@ -16,7 +16,6 @@ public class EventPump extends Thread {
 
     public static EventPump getInstance() {
         if (EventPump.instance == null) {
-            System.out.println("EVENTPUMP BEING CREATED");
             EventPump.instance = new EventPump();
             EventPump.instance.start();
         }
@@ -30,24 +29,18 @@ public class EventPump extends Thread {
         while(true) {
             synchronized (lock) {
                 if(!pumpList.isEmpty()){
-                    System.out.println("... EVENTPUMP running event ... ");
-                    System.out.println("... pump size befor:" + pumpList.size());
                     nextEvent = pumpList.removeFirst();
-                    System.out.println("... pump size after:" + pumpList.size());
                     nextEvent.run();
                     lock.notify();
                 } else {
-                    System.out.println("... EVENTPUMP waiting ...");
                     try {lock.wait(2000);} catch (InterruptedException e) {}
                 }
             }
         }
     }
     public void post(Runnable event) {
-        System.out.println("... trying to post... ");
         synchronized (lock) {
             lock.notify();
-            System.out.println("... EVENTPUMP adding event ...");
             pumpList.add(event);
         }
     }

@@ -38,11 +38,9 @@ public class MessageQueue {
         public void run(){
             byte[] messageLengthByte = {(byte)messageLength};
             int written = 0;
-            System.out.println("... sender: running ...");
             synchronized (this){
                 while (written ==0){
                     try {
-                        System.out.println("... sender: write length to channel ...");
                         written = channel.write(messageLengthByte, 0, 1);
                     } catch (IOException e){
                         //nothing
@@ -54,7 +52,6 @@ public class MessageQueue {
                 int offset = messageOffset;
                     while(offset < messageLength){
                         try {
-                            System.out.println("... sender: write " + offset + " of " + messageLength + " to channel ...");
                             lengthWritten = channel.write(messageBytes, offset, lengthToWrite);
                             lengthToWrite -= lengthWritten;
                             offset+= lengthWritten;
@@ -63,7 +60,13 @@ public class MessageQueue {
                         };
                     }
             }
-            listener.sent(messageBytes);
+            EventPump.getInstance().post(new Runnable() {
+
+                @Override
+                public void run() { 
+                    listener.sent(messageBytes);
+                }
+            });
         }
     }
 
@@ -81,8 +84,6 @@ public class MessageQueue {
             byte[] lengthMessage;
             int read;
             while(true){
-
-                System.out.println("trying to read");
                 lengthMessage = new byte[1];
                 read = 0;
                 synchronized (this){
@@ -107,12 +108,19 @@ public class MessageQueue {
                             // nothing
                         };
                     }
-                    listener.received(message);
+                    EventPump.getInstance().post(new Runnable() {
+
+                        @Override
+                        public void run() { 
+                            listener.received(message);
+                        }
+                    });
                 }
             }
         }
         
     }
+    
     public MessageQueue(Channel channel, Broker broker){
         this.channel = channel;
         this.broker = broker;
@@ -130,11 +138,9 @@ public class MessageQueue {
         Receiver receiver = new Receiver(channel, this.listener);
         task1.Task receiverTask = new task1.Task(broker, receiver);
         receiverTask.start();
-        System.out.println("... listener set ...");
     }
 
     boolean send(byte[] message, int offset, int length){
-        System.out.println("... sending ...");
         Sender sender = new Sender(channel, listener, message, offset, length);
         task1.Task senderTask = new task1.Task(broker, sender);
         senderTask.start();
