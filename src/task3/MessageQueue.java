@@ -127,20 +127,20 @@ public class MessageQueue {
         // this.queue = new LinkedList<Message>();
     }
 
-    interface Listener {
+    public interface Listener {
         void received(byte[] msg);
         void sent(byte[] msg);
         void closed();
     }
 
-    void setListener(Listener l){
+    public void setListener(Listener l){
         this.listener = l;
         Receiver receiver = new Receiver(channel, this.listener);
         task1.Task receiverTask = new task1.Task(broker, receiver);
         receiverTask.start();
     }
 
-    boolean send(byte[] message, int offset, int length){
+    public boolean send(byte[] message, int offset, int length){
         Sender sender = new Sender(channel, listener, message, offset, length);
         task1.Task senderTask = new task1.Task(broker, sender);
         senderTask.start();

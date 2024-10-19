@@ -83,7 +83,12 @@ public class testEchoServer {
         });
         */
 
-        class messageQueueListener implements MessageQueue.Listener{
+        
+
+        class clientConnectListener implements QueueBroker.ConnectListener{
+            byte[] message = MESSAGE.getBytes();
+            
+            class messageQueueListener implements MessageQueue.Listener{
 
             @Override
             public void received(byte[] msg) {
@@ -102,9 +107,6 @@ public class testEchoServer {
             }
 
         }
-
-        class clientConnectListener implements QueueBroker.ConnectListener{
-            byte[] message = MESSAGE.getBytes();
 
             @Override
             public void connected(MessageQueue msgQueue) {

@@ -8,8 +8,7 @@ public class EventPump extends Thread {
     List<Runnable> pumpList;
     Object lock = new Object();
     static EventPump instance;
-
-    
+    boolean dead = false;
     private EventPump() {
         this.pumpList = new LinkedList<Runnable>();
     }
@@ -26,7 +25,7 @@ public class EventPump extends Thread {
 
     public synchronized void run() {
         Runnable nextEvent;
-        while(true) {
+        while(!dead) {
             synchronized (lock) {
                 if(!pumpList.isEmpty()){
                     nextEvent = pumpList.removeFirst();
@@ -42,6 +41,13 @@ public class EventPump extends Thread {
         synchronized (lock) {
             lock.notify();
             pumpList.add(event);
+        }
+    }
+
+    public void kill() {
+        synchronized (lock) {
+            dead = true;
+            lock.notify();
         }
     }
 }

@@ -10,7 +10,7 @@ public class QueueBroker {
     HashMap <Integer, Acceptor> acceptorMap;
     HashMap <Integer, Connector> connectorMap;
 
-    QueueBroker(String name, Broker broker){
+    public QueueBroker(String name, Broker broker){
         this.name = name;
         this.broker = broker;
         this.acceptorMap = new HashMap<>();
@@ -103,16 +103,16 @@ public class QueueBroker {
     }
 
 
-    interface AcceptListener {
+    public interface AcceptListener {
         void accepted(MessageQueue queue);
     }
 
-    interface ConnectListener {
+    public interface ConnectListener {
         void connected(MessageQueue queue);
         void refused();
     }
     
-    boolean bind(int port, AcceptListener listener){
+    public boolean bind(int port, AcceptListener listener){
         Acceptor acceptor = new Acceptor(port, listener);
         task1.Task acceptorTask = new task1.Task(broker, acceptor);
         acceptorMap.put(port, acceptor);
@@ -129,7 +129,7 @@ public class QueueBroker {
         return true;
     };
     
-    boolean connect(String name, int port, ConnectListener listener){
+    public boolean connect(String name, int port, ConnectListener listener){
         Connector connector = new Connector(name, port, listener);
         task1.Task connectorTask = new task1.Task(broker, connector);
         connectorMap.put(port, connector);
