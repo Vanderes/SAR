@@ -1,12 +1,13 @@
 package task4;
 
 import java.util.HashMap;
-import task1.*;
+import task3.*;
 public class Broker {
 
   BrokerManager brokerManager;
   String brokerName;
   HashMap <Integer, Rendevous> rdvMap;
+  Broker thisBroker = this;
 
   public Broker(String name){
     brokerName = name;
@@ -14,44 +15,87 @@ public class Broker {
     brokerManager.add(this);
     rdvMap = new HashMap<Integer, Rendevous>();
   };
+
   public String getName(){
     return brokerName;
   };
+  
   public BrokerManager getBrokerManager(){
     return brokerManager;
   };
 
-  public Channel accept(int port) throws InterruptedException, IllegalStateException {
-    Rendevous rdv = rdvMap.get(port);
-    synchronized (this) {
-      if (rdv == null) {
-        rdv = new Rendevous(this, null);
-        rdvMap.put(port, rdv);
+  public interface  AcceptListener {
+    void accepted(Channel channel);
+  }
+
+  public interface ConnectListener{
+    void connected(Channel channel);
+  }
+
+  // if the port is already in use, throw an exception, allready accepting on port is considered "in use"
+  // when rdv meets, listener is notified "accepted" and the rendevous is removed from the map
+  public void accept(int port, AcceptListener listener) throws IllegalStateException {
+    class rdvAcceptListener implements Rendevous.AcceptListener{
+      AcceptListener listener;
+      rdvAcceptListener(AcceptListener listener){
+        this.listener = listener;
       }
-      else if (rdv.full) {
-          throw new IllegalStateException("Busy on port" + port);
+      @Override
+      public void accepted(Channel channel){
+        
+        //should be reset?
+        rdvMap.remove(port);
+        listener.accepted(channel);
       }
-      notifyAll();
     }
-    return rdv.accept(this);
+    if(rdvMap.containsKey(port)){
+      throw new IllegalStateException("Busy on port" + port);    
+    } else{
+      //should this be posted?
+      EventPump.getInstance().post(new Runnable() {
+        @Override
+        public void run() {
+          Rendevous rdv = new Rendevous(thisBroker, null);
+          rdvMap.put(port, rdv);
+          rdv.accept(thisBroker, new rdvAcceptListener(listener));
+        }
+      });
+    }    
   }
 
 
 
-  public Channel connect(String name, int port) throws InterruptedException, IllegalStateException{
+  public void connect(String name, int port, ConnectListener listener) throws IllegalStateException{
     Broker rBroker = brokerManager.get(name);
-    Rendevous rdv = rBroker.rdvMap.get(port);
-    synchronized (this) {
-      while (rdv == null){
-        try{wait(1000);} 
-        catch(InterruptedException e){
-        };
-        rdv = rBroker.rdvMap.get(port);
+
+    class rdvConnectListener implements Rendevous.ConnectListener{
+      ConnectListener listener;
+      rdvConnectListener(ConnectListener listener){
+        this.listener = listener;
       }
-      if (rdv.cc != null) {
-          throw new IllegalStateException("Broker " + name + " is busy on port" + port);
+      @Override
+      public void connected(Channel channel){
+        rdvMap.remove(port);
+        listener.connected(channel);
       }
     }
-    return rdv.connect(this);
+
+    if (rBroker.rdvMap.containsKey(port)){
+      Rendevous rdv = rBroker.rdvMap.get(port);
+      if (rdv.isFull()) {
+        throw new IllegalStateException("Broker " + name + " is busy on port" + port);
+      } else{
+      rdv.connect(thisBroker, new rdvConnectListener(listener));
+      }
+      
+    } else {
+      //should this be posted?
+      EventPump.getInstance().post(new Runnable() {
+        @Override
+        public void run() {
+          connect(name, port, listener);
+        }
+      });
+    }
   }
 }

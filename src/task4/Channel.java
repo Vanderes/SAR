@@ -32,21 +32,16 @@ public class Channel {
     }
 
     if (out.empty()){
-      synchronized (this) {
-        try{wait(1000);}catch(InterruptedException e){};
-      }
+      return 0;
     }
 
     int i = 0;
-    synchronized (this){
-      while(i < length) { 
-        try{
-            bytes[offset + i] = out.pull();
-            notifyAll();
-            i += 1;
-        } catch (IllegalStateException e) {
-            return i;
-        }
+    while(offset + i < length) { 
+      try{
+          bytes[offset + i] = out.pull();
+          i += 1;
+      } catch (IllegalStateException e) {
+          return i;
       }
     }
     return i;
@@ -61,26 +56,19 @@ public class Channel {
     }
 
     if (in.full()){
-      synchronized (this) {
-        try{wait(1000);}catch(InterruptedException e){};
-      }
+      return 0;
     }
 
     int i = 0;
-    synchronized (this){
-      while(i < length) { 
-        try{
-          in.push(bytes[offset + i]);
-          notifyAll();
-          i += 1;
-        } catch (IllegalStateException e) {
-            return i;
-        }
+    while(offset + i < length) { 
+      try{
+        in.push(bytes[offset + i]);
+        i += 1;
+      } catch (IllegalStateException e) {
+          return i;
       }
     }
     return i;
-
-
   };
   
   public void disconnect(){

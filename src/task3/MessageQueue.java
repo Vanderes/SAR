@@ -108,13 +108,7 @@ public class MessageQueue {
                             // nothing
                         };
                     }
-                    EventPump.getInstance().post(new Runnable() {
-
-                        @Override
-                        public void run() { 
-                            listener.received(message);
-                        }
-                    });
+                    listener.received(message);
                 }
             }
         }

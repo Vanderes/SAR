@@ -10,9 +10,6 @@ public class Rendevous {
     CircularBuffer CB2;
     Channel chAccept;
     Channel chConnect;
-    MessageQueue messageQueueAccept;
-    MessageQueue messageQueueConnect;
-    boolean full;
 
 
     Rendevous(Broker a, Broker c){
@@ -24,55 +21,46 @@ public class Rendevous {
         chConnect = new Channel(CB1, CB2);
         chAccept.addRemote(chConnect);
         chConnect.addRemote(chAccept);
-        messageQueueAccept = new MessageQueue(chAccept, c);
-        messageQueueConnect = new MessageQueue(chConnect, a);
-        boolean full = false;
     };
 
-
-    MessageQueue accept(Broker b) throws InterruptedException {
-        synchronized (this) {
-            ac = b;
-            notifyAll();
-        }
+    interface AcceptListener {
+        void accepted(Channel channel);
+    }
+    interface ConnectListener {
+        void connected(Channel channel);
+    }
+    void accept(Broker b, AcceptListener listener) {
+        ac = b;
         if (cc == null) {
             EventPump.getInstance().post(new Runnable() {
                 @Override
                 public void run() {
-                    try {
-                        accept(b);
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
+                   accept(b, listener);
                 }
             });
-            return null;
         } else {
-            full = true;
-            return messageQueueAccept;}
+            //meeting point
+            listener.accepted(chAccept);
+        }
     }
 
-    MessageQueue connect(Broker b) throws InterruptedException {
-        synchronized (this) {
-            cc = b;
-            notifyAll();
-        }
+    void connect(Broker b, ConnectListener listener) {  
+        cc = b;
         if (ac == null) {
             EventPump.getInstance().post(new Runnable() {
                 @Override
                 public void run() {
-                    try {
-                        connect(b);                                                 //not sure if this is correct
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
+                    connect(b, listener);                                                 //not sure if this is correct
                 }
             });
-            return null;
         } else {
-            full = true;
-            return messageQueueConnect;
+            //meeting point
+            listener.connected(chConnect);
         }
+    }
+
+    boolean isFull() {
+        return (ac != null && cc != null);
     }
 
 }

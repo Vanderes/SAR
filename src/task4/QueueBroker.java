@@ -8,8 +8,9 @@ import task3.*;
 public class QueueBroker {
     Broker broker;
     String name;
-    HashMap <Integer, Acceptor> acceptorMap;
-    HashMap <Integer, Connector> connectorMap;
+    HashMap <Integer, BrokerAcceptListener> acceptorMap;
+    HashMap <Integer, BrokerConnectListener> connectorMap;
+
 
     public QueueBroker(String name, Broker broker){
         this.name = name;
@@ -18,80 +19,45 @@ public class QueueBroker {
         this.connectorMap = new HashMap<>();
     };
 
-    class Acceptor implements Runnable{
-        boolean run;
-        int port;
+    class BrokerAcceptListener implements Broker.AcceptListener{
         AcceptListener listener;
-
-        Acceptor(int port, AcceptListener listener){
-            this.port = port;
-            this.listener=listener;
-            run=true;
-        }
-        void stop(){run=false;}
-
-        @Override
-        public void run(){
-            Channel channel;
-            while(run){
-                try {
-                    channel = broker.accept(port);
-                    if (channel == null) {
-                        EventPump.getInstance().post(this);
-                    }
-                    final Channel finalChannel = channel;
-                    EventPump.getInstance().post(new Runnable() {
-
-                        @Override
-                        public void run() {
-                            MessageQueue mq = new MessageQueue(finalChannel, broker);
-                            listener.accepted(mq);
-                        }
-                    });
-                } catch (IllegalStateException e) {
-                    //nothing
-                } catch (InterruptedException e) {
-                    //nothing
-                }
-            }
-        }
-    }
-
-    class Connector implements Runnable{
-        boolean run;
         int port;
-        ConnectListener listener;
-        String name;
+        boolean dead;
 
-        Connector(String name, int port, ConnectListener listener){
+        BrokerAcceptListener(AcceptListener listener, int port){
+            this.listener = listener;
             this.port = port;
-            this.listener=listener;
-            this.name = name;
-            run=true;
         }
-        void stop(){run=false;}
 
         @Override
-        public void run(){
-            Channel channel;
-            try {
-                channel = broker.connect(name, port);
-                final Channel finalChannel = channel;
-                EventPump.getInstance().post(new Runnable() {
-                    @Override
-                    public void run() {
-                        MessageQueue mq = new MessageQueue(finalChannel, broker);
-                        listener.connected(mq);
-                    }}
-                );
-            } catch (IllegalStateException e) {
-                listener.refused();
-            } catch (InterruptedException e) {
-                listener.refused();
+        public void accepted(Channel channel ){
+            if (!dead){
+                MessageQueue mq = new MessageQueue(channel);
+                listener.accepted(mq);
+                broker.accept(port, this);
             }
         }
+        public void kill(){
+            dead = true;
+        }
     }
+    
+    class BrokerConnectListener implements Broker.ConnectListener{
+        ConnectListener listener;
+        int port;
 
+        BrokerConnectListener(ConnectListener listener, int port){
+            this.listener = listener;
+            this.port = port;
+        }
+
+        @Override
+        public void connected(Channel channel){
+            MessageQueue mq = new MessageQueue(channel);
+            listener.connected(mq);
+            connectorMap.remove(port);
+        }
+    }
 
     public interface AcceptListener {
         void accepted(MessageQueue queue);
@@ -101,27 +67,40 @@ public class QueueBroker {
         void connected(MessageQueue queue);
         void refused();
     }
-    
+
+    // bind should be indefinite, which is not the case here
     public boolean bind(int port, AcceptListener listener){
-        Acceptor acceptor = new Acceptor(port, listener);
-        acceptorMap.put(port, acceptor);
-        EventPump.getInstance().post(acceptor);
+        BrokerAcceptListener brokerAcceptListener = new BrokerAcceptListener(listener, port);
+        acceptorMap.put(port, brokerAcceptListener);
+
+        //shloud this be posted?
+        EventPump.getInstance().post(new Runnable(){
+            @Override
+            public void run(){
+                broker.accept(port, brokerAcceptListener);
+            }
+        });
         return true;
     };
 
     boolean unbind(int port){
-        Acceptor acceptor = acceptorMap.get(port);
-        if (acceptor == null) {
+        if (acceptorMap.containsKey(port)) {
             return false;
         }
-        acceptor.stop();
+        acceptorMap.get(port).kill();
+        acceptorMap.remove(port);
         return true;
     };
     
     public boolean connect(String name, int port, ConnectListener listener){
-        Connector connector = new Connector(name, port, listener);
-        EventPump.getInstance().post(connector);
-        connectorMap.put(port, connector);
+        BrokerConnectListener brokerConnectListener = new BrokerConnectListener(listener, port);    
+        connectorMap.put(port, brokerConnectListener);
+        EventPump.getInstance().post(new Runnable() {
+            @Override
+            public void run() {
+                broker.connect(name, port, brokerConnectListener);
+            }
+        });
         return true;
     };
 }

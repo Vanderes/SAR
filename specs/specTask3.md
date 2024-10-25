@@ -1,4 +1,4 @@
-# Specification for an event-based version
+# Specification for an thread-event mixed version
 ### Overview:
 
 *A module for enabling non-blocking communication between brokers.*
@@ -11,28 +11,34 @@
     abstract class QueueBroker{
 
 
-        // Constructor to initialize the QueueBroker with a name
+Constructor to initialize the QueueBroker with a name
+
         QueueBroker(String name);
 
-        // Interface for handling accepted connections
+Non-blocking method to bind the broker to a specific port, a given accept listener is addressed when the broker accepts a connection on a given port
+
+        boolean bind(int port, AcceptListener listener);
+
+Interface for handling accepted connections, methods should be implemented upon creation
+
         interface AcceptListener {
             void accepted(MessageQueue queue);
         }
 
-        // Method to bind the broker to a specific port and set an accept listener
-        boolean bind(int port, AcceptListener listener);
+Method to unbind the broker from a specific port, returns boolean false if there was nothing to unbind on the given port, returns boolean true if succesfull
 
-        // Method to unbind the broker from a specific port
         boolean unbind(int port);
 
-        // Interface for handling connection events
+Non-blocking method to connect to a queue broker by name and port, the given connect listener will be adressed when connected or refused.
+
+        boolean connect(String name, int port, ConnectListener listener);    
+        }
+
+Interface for handling connection events, methods should be implemented upon creation
+
         interface ConnectListener {
             void connected(MessageQueue queue);
             void refused();
-        }
-
-        // Method to connect to a queue broker by name and port, and set a connect listener
-        boolean connect(String name, int port, ConnectListener listener);    
         }
 
 
@@ -41,24 +47,26 @@
 
     abstract class MessageQueue {
     
-        // Interface for handling received messages and closed events
+Interface for handling received messages and closed events, methods should be implemented upon creation
+
         interface Listener {
             void received(byte[] msg);
             void closed();
         }
 
-        // Method to set the listener for the message queue
+Method to set a listener for the message queue
+
         void setListener(Listener l);
 
-        // Method to send a message as a byte array
-        boolean send(byte[] bytes);
+Non-blocking method to send a message as a byte array with a given offset and length. It returns false if the MessageQueue is disconnected, true otherwise. 
 
-        // Overloaded method to send a portion of a byte array as a message
         boolean send(byte[] bytes, int offset, int length);
 
-        // Method to close the message queue
+Method to close the message queue
         void close();
 
-        // Method to check if the message queue is closed
+Method to check if the message queue is closed
         boolean closed();
     }
+
+### TaskEvent

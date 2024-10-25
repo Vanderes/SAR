@@ -121,12 +121,14 @@ public class QueueBroker {
     };
 
     boolean unbind(int port){
-        Acceptor acceptor = acceptorMap.get(port);
-        if (acceptor == null) {
+        if (acceptorMap.containsKey(port)){
+            acceptorMap.get(port).stop();
+            acceptorMap.remove(port);
+            return true;
+        }
+        else{
             return false;
         }
-        acceptor.stop();
-        return true;
     };
     
     public boolean connect(String name, int port, ConnectListener listener){

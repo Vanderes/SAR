@@ -3,7 +3,7 @@ package task3;
 import java.util.LinkedList;
 import java.util.List;
 
-
+// public class EventPump extends Thread, which is a thread that runs a list of Runnable objects, one at a time. Only one EventPump object can exist at a time.
 public class EventPump extends Thread {
     List<Runnable> pumpList;
     Object lock = new Object();
@@ -22,10 +22,10 @@ public class EventPump extends Thread {
         return EventPump.instance;
     }
 
-
+    // public void run(), which runs the list of Runnable objects, one at a time. The method waits for a new Runnable object to be added to the list if the list is empty.
     public synchronized void run() {
         Runnable nextEvent;
-        while(!dead) {
+        while(!dead || !pumpList.isEmpty()) {
             synchronized (lock) {
                 if(!pumpList.isEmpty()){
                     nextEvent = pumpList.removeFirst();
@@ -38,9 +38,11 @@ public class EventPump extends Thread {
         }
     }
     public void post(Runnable event) {
-        synchronized (lock) {
-            lock.notify();
-            pumpList.add(event);
+        if(!dead){
+            synchronized (lock) {
+                lock.notify();
+                pumpList.add(event);
+            }
         }
     }
 

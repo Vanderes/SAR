@@ -1,8 +1,6 @@
 package task4;
-import java.io.IOException;
-
-import task2.*;
 import task3.*;
+import java.io.IOException;
 
 public class MessageQueue {
     Listener listener;
@@ -18,114 +16,107 @@ public class MessageQueue {
     //         this.length = length;
     //     }
     // }
-    private Broker broker;
 
     class Sender implements Runnable{
         final Channel channel;
         final Listener listener;
-        final byte[] messageBytes;
-        final int messageOffset;
-        final int messageLength;
+        byte[] messageBytes;
+        int messageLength;
+        int written = 0;
 
 
         Sender(Channel channel, Listener listener, byte[] bytes, int offset, int length){
             this.channel = channel;
             this.messageBytes = bytes;
-            this.messageOffset = offset;
             this.messageLength = length;
             this.listener = listener;
         }
 
         @Override
         public void run(){
-            byte[] messageLengthByte = {(byte)messageLength};
-            int written = 0;
-            synchronized (this){
-                while (written ==0){
-                    try {
-                        written = channel.write(messageLengthByte, 0, 1);
-                    } catch (IOException e){
-                        //nothing
-                    }
+            if(written == 0){
+                byte[] messageLengthByte = {(byte)messageLength};
+                try {
+                    if((written = channel.write(messageLengthByte, 0, 1))==1){
+                    };
+                } catch (IOException e){
+                    return;
                 }
-            
-                int lengthWritten = 0;
-                int lengthToWrite = messageLength;
-                int offset = messageOffset;
-                    while(offset < messageLength){
-                        try {
-                            lengthWritten = channel.write(messageBytes, offset, lengthToWrite);
-                            lengthToWrite -= lengthWritten;
-                            offset+= lengthWritten;
-                        } catch (IOException e) {
-                            //nothing
-                        };
-                    }
             }
-            EventPump.getInstance().post(new Runnable() {
-
-                @Override
-                public void run() { 
-                    listener.sent(messageBytes);
+            if(written > 0){
+                if(written - 1 < messageLength){
+                    try {
+                        written += channel.write(messageBytes, written - 1, messageLength);
+                    } catch (IOException e) {
+                        return;
+                    };
                 }
-            });
+                if(written - 1 > messageLength){
+                    throw new IllegalStateException("Written more than expected");
+                }
+                if(written - 1 == messageLength){
+                    listener.sent(messageBytes);
+                    written = 0;
+                    return;
+                }
+            }
+            EventPump.getInstance().post(this);
         }
     }
 
-    class Receiver implements Runnable{
+    class Receive implements Runnable{
         final Channel channel;
         final Listener listener;
+        byte[] lengthMessage = new byte[1];
+        int read = 0;
+        int length = 1;
+        byte[] message;
 
-        Receiver(Channel channel, Listener listener){
+        Receive(Channel channel, Listener listener){
             this.channel = channel;
             this.listener  = listener;
+
         }
 
         @Override
-        public void run() {
-            byte[] lengthMessage;
-            int read;
-            while(true){
-                lengthMessage = new byte[1];
-                read = 0;
-                synchronized (this){
-                    while (read == 0){
-                        try{
-                            read = channel.read(lengthMessage, 0, 1);
-                        } catch (IOException e) { 
-                            // nothing
-                        };
-                        
-                    }
-                    byte[] message = new byte[lengthMessage[0]];
-                    int lengthToRead = lengthMessage[0];
-                    int lengthRead = 0;
-                    int offsetRead = 0;
-                    while(offsetRead < lengthMessage[0]){
-                        try{
-                        lengthRead = channel.read(message, offsetRead, lengthToRead);
-                        lengthToRead -= lengthRead;
-                        offsetRead += lengthRead;
-                        } catch (IOException e) { 
-                            // nothing
-                        };
-                    }
-                    EventPump.getInstance().post(new Runnable() {
-
-                        @Override
-                        public void run() { 
-                            listener.received(message);
-                        }
-                    });
+        public void run() throws IllegalStateException {
+            
+            if(read == 0){
+               try{
+                    if ((read += channel.read(lengthMessage, 0, 1)) == 1){
+                        length = lengthMessage[0];
+                        this.message = new byte[length];
+                    };
+                    // WHAT if read > 1? not my responsability?
+                } catch (IOException e) { 
+                    // nothing
+                    return;
+                };
+            }
+            if(read > 0){
+                if(read - 1 < length){
+                    try{
+                    read += channel.read(message, read-1, length);
+                    } catch (IOException e) { 
+                        return;
+                    };
+                } 
+                if(read -1 > length){
+                    throw new IllegalStateException("Read more than expected");
+                }
+                if(read - 1 == length){
+                    listener.received(message);
+                    read = 0;
+                    length = 0;
+                    this.message = new byte[0];
                 }
             }
+            EventPump.getInstance().post(this);
         }
-        
     }
     
-    public MessageQueue(Channel channel, Broker broker){
+    public MessageQueue(Channel channel){
         this.channel = channel;
-        this.broker = broker;
         // this.queue = new LinkedList<Message>();
     }
 
@@ -137,16 +128,19 @@ public class MessageQueue {
 
     public void setListener(Listener l){
         this.listener = l;
-        Receiver receiver = new Receiver(channel, this.listener);
-        task1.Task receiverTask = new task1.Task(broker, receiver);
-        receiverTask.start();
+        Receive receiver = new Receive(channel, this.listener);
+        EventPump.getInstance().post(receiver);
     }
 
     public boolean send(byte[] message, int offset, int length){
-        Sender sender = new Sender(channel, listener, message, offset, length);
-        task1.Task senderTask = new task1.Task(broker, sender);
-        senderTask.start();
-    return true;
+        if (channel.disconnected){
+            return false;
+        }
+        byte[] messageCopy = new byte[length];
+        System.arraycopy(message, offset, messageCopy, 0, length);
+        Sender sender = new Sender(channel, listener, messageCopy, 0, length);
+        EventPump.getInstance().post(sender);
+        return true;
     }
 
     void close(){

@@ -93,7 +93,7 @@ public class testEchoServer {
             @Override
             public void received(byte[] msg) {
                 System.out.println("CLIENT Received: " + new String(msg, StandardCharsets.UTF_8));  
-                
+                EventPump.getInstance().kill();
             }
 
             @Override

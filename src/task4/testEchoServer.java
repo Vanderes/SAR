@@ -1,14 +1,12 @@
 package task4;
 
 import java.nio.charset.StandardCharsets;
-
-import task2.*;
 import task3.*;
 
 public class testEchoServer {
     public static final int PORT = 800;
     public static final String MESSAGE = "Hello world";
-
+    
     public static void main(String[] args) throws InterruptedException{
         Broker brokerClient = new Broker( "brokerClient");
         Broker brokerServer = new Broker( "brokerServer");
