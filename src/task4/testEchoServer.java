@@ -6,7 +6,7 @@ import task3.*;
 public class testEchoServer {
     public static final int PORT = 800;
     public static final String MESSAGE = "Hello world";
-    
+
     public static void main(String[] args) throws InterruptedException{
         Broker brokerClient = new Broker( "brokerClient");
         Broker brokerServer = new Broker( "brokerServer");
@@ -14,25 +14,6 @@ public class testEchoServer {
         QueueBroker queueBrokerServer =  new QueueBroker("queueBrokerServer", brokerServer);
 
         EventPump eventPump = EventPump.getInstance();
-        
-        
-
-        // S E R V E R
-
-        /*
-        TaskEvent echoServer = new TaskEvent(queueBrokerServer, new Runnable() {
-
-            @Override
-            public void run() {
-                System.out.println("... SERVER running ...");
-                // TaskEvent currentTask = (TaskEvent)Thread.currentThread();
-                QueueBroker queueBroker = TaskEvent.getQueueBroker();
-
-                
-            }
-
-        }); 
-        */
 
         class ServerAcceptListener implements QueueBroker.AcceptListener{
             @Override
@@ -85,22 +66,6 @@ public class testEchoServer {
                 }
             }
         }
-
-        // C L I E N T
-
-        /*
-        TaskEvent echoClient = new TaskEvent(queueBrokerClient, new Runnable(){ 
-            @Override
-            public void run(){
-                System.out.println("... CLIENT running");
-                byte[] message = MESSAGE.getBytes();
-                TaskEvent currentTask = (TaskEvent)Thread.currentThread();
-                QueueBroker queueBroker = currentTask.queueBroker;
-
-            }
-        });
-        */
-
 
         class clientConnectListener implements QueueBroker.ConnectListener{
             byte[] message = MESSAGE.getBytes();

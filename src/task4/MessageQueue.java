@@ -17,12 +17,42 @@ public class MessageQueue {
     //     }
     // }
 
+    /**
+     * Convertit un entier en tableau d'octets.
+     * @param value L'entier à convertir.
+     * @return Un tableau de 4 octets représentant l'entier.
+     */
+    private static byte[] intToByteArray(int value) {
+        return new byte[] {
+            (byte)(value >>> 24),
+            (byte)(value >>> 16),
+            (byte)(value >>> 8),
+            (byte)value
+        };
+    }
+
+    /**
+     * Convertit un tableau de 4 octets en entier.
+     * @param bytes Le tableau de 4 octets à convertir.
+     * @return L'entier correspondant au tableau d'octets.
+     */
+    private static int byteArrayToInt(byte[] bytes) {
+        if (bytes.length != 4) {
+            throw new IllegalArgumentException("Le tableau doit contenir exactement 4 octets");
+        }
+        return ((bytes[0] & 0xFF) << 24) |
+               ((bytes[1] & 0xFF) << 16) |
+               ((bytes[2] & 0xFF) << 8) |
+               (bytes[3] & 0xFF);
+    }
+
     class Sender implements Runnable{
         final Channel channel;
         final Listener listener;
         byte[] messageBytes;
-        int messageLength;
         int written = 0;
+        int messageLength;
+        byte[] messageLengthByte;
 
 
         Sender(Channel channel, Listener listener, byte[] bytes, int offset, int length){
@@ -30,31 +60,30 @@ public class MessageQueue {
             this.messageBytes = bytes;
             this.messageLength = length;
             this.listener = listener;
+            this.messageLengthByte = intToByteArray(messageLength);
         }
 
         @Override
         public void run(){
-            if(written == 0){
-                byte[] messageLengthByte = {(byte)messageLength};
+            if(written < 4){
                 try {
-                    if((written = channel.write(messageLengthByte, 0, 1))==1){
-                    };
+                    written += channel.write(messageLengthByte, written, 4 - written);
                 } catch (IOException e){
                     return;
                 }
             }
-            if(written > 0){
-                if(written - 1 < messageLength){
+            if(written >= 4){
+                if(written - 4 < messageLength){
                     try {
-                        written += channel.write(messageBytes, written - 1, messageLength);
+                        written += channel.write(messageBytes, written - 4, messageLength);
                     } catch (IOException e) {
                         return;
                     };
                 }
-                if(written - 1 > messageLength){
+                if(written - 4 > messageLength){
                     throw new IllegalStateException("Written more than expected");
                 }
-                if(written - 1 == messageLength){
+                if(written - 4 == messageLength){
                     listener.sent(messageBytes);
                     written = 0;
                     return;
@@ -67,7 +96,7 @@ public class MessageQueue {
     class Receive implements Runnable{
         final Channel channel;
         final Listener listener;
-        byte[] lengthMessage = new byte[1];
+        byte[] lengthMessage = new byte[4];
         int read = 0;
         int length = 1;
         byte[] message;
@@ -81,30 +110,29 @@ public class MessageQueue {
         @Override
         public void run() throws IllegalStateException {
             
-            if(read == 0){
+            if(read < 4){
                try{
-                    if ((read += channel.read(lengthMessage, 0, 1)) == 1){
-                        length = lengthMessage[0];
+                    read += channel.read(lengthMessage, read, 4-read);
+                    if (read == 4){
+                        length = byteArrayToInt(lengthMessage);
                         this.message = new byte[length];
-                    };
-                    // WHAT if read > 1? not my responsability?
+                    }
                 } catch (IOException e) { 
-                    // nothing
                     return;
                 };
             }
-            if(read > 0){
-                if(read - 1 < length){
+            if(read >= 4){
+                if(read - 4 < length){
                     try{
-                    read += channel.read(message, read-1, length);
+                    read += channel.read(message, read - 4, length);
                     } catch (IOException e) { 
                         return;
                     };
                 } 
-                if(read -1 > length){
+                if(read - 4 > length){
                     throw new IllegalStateException("Read more than expected");
                 }
-                if(read - 1 == length){
+                if(read - 4 == length){
                     listener.received(message);
                     read = 0;
                     length = 0;
@@ -151,4 +179,3 @@ public class MessageQueue {
         return channel.disconnected;
     };
 }
-
