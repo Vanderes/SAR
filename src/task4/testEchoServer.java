@@ -5,7 +5,11 @@ import task3.*;
 
 public class testEchoServer {
     public static final int PORT = 800;
-    public static final String MESSAGE = "Hello world";
+    public static final String MESSAGE1 = "Hellllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllo";
+    public static final String MESSAGE2 = "World";
+    public static final String MESSAGE3 = "Howwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww";
+    public static final String MESSAGE4 = "Arrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrre";
+    public static final String MESSAGE5 = "You";
 
     public static void main(String[] args) throws InterruptedException{
         Broker brokerClient = new Broker( "brokerClient");
@@ -50,7 +54,7 @@ public class testEchoServer {
                     eventPump.post(new Runnable() {
                         @Override
                         public void run() {
-                            System.out.println("SERVER Sent: " + new String(msg, StandardCharsets.UTF_8));  
+                            //System.out.println("SERVER Sent: " + new String(msg, StandardCharsets.UTF_8));  
                         }
                     });
                 }
@@ -68,7 +72,11 @@ public class testEchoServer {
         }
 
         class clientConnectListener implements QueueBroker.ConnectListener{
-            byte[] message = MESSAGE.getBytes();
+            byte[] message1 = MESSAGE1.getBytes();
+            byte[] message2 = MESSAGE2.getBytes();
+            byte[] message3 = MESSAGE3.getBytes();
+            byte[] message4 = MESSAGE4.getBytes();
+            byte[] message5 = MESSAGE5.getBytes();
             
             @Override
             public void connected(MessageQueue msgQueue) {
@@ -77,7 +85,11 @@ public class testEchoServer {
                     public void run() {
                         System.out.println("... CLIENT connected ...");
                         msgQueue.setListener(new messageQueueListener());
-                        msgQueue.send(message, 0, message.length);
+                        msgQueue.send(message1, 0, message1.length);
+                        msgQueue.send(message2, 0, message2.length);
+                        msgQueue.send(message3, 0, message3.length);
+                        msgQueue.send(message4, 0, message4.length);
+                        msgQueue.send(message5, 0, message5.length);
                     }
                 });
             }
@@ -103,10 +115,10 @@ public class testEchoServer {
                         public void run() {
                             String receivedMsg = new String(msg, StandardCharsets.UTF_8);
                             System.out.println("CLIENT Received: " + receivedMsg);  
-                            if (receivedMsg.equals(MESSAGE)){
-                                System.out.println("SUCCES");
-                                eventPump.kill();
-                            }
+                            // if (receivedMsg.equals(MESSAGE)){
+                            //     System.out.println("SUCCES");
+                            //     eventPump.kill();
+                            // }
                         }
                     });
                 }
@@ -116,7 +128,7 @@ public class testEchoServer {
                     eventPump.post(new Runnable() {
                         @Override
                         public void run() {
-                            System.out.println("CLIENT Sent: " + new String(msg, StandardCharsets.UTF_8));  
+                            //System.out.println("CLIENT Sent: " + new String(msg, StandardCharsets.UTF_8));  
                         }
                     });
                 }
