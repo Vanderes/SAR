@@ -91,7 +91,8 @@ public class MessageQueue {
                         try{
                             read = channel.read(lengthMessage, 0, 1);
                         } catch (IOException e) { 
-                            // nothing
+                            listener.closed();
+                            return;
                         };
                         
                     }
@@ -105,7 +106,7 @@ public class MessageQueue {
                         lengthToRead -= lengthRead;
                         offsetRead += lengthRead;
                         } catch (IOException e) { 
-                            // nothing
+                            listener.closed();
                         };
                     }
                     listener.received(message);

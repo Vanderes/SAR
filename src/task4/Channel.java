@@ -1,6 +1,5 @@
 package task4;
 
-import java.io.IOException;
 
 import task1.*;
 import task3.EventPump;

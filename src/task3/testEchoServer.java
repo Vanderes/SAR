@@ -15,8 +15,6 @@ public class testEchoServer {
         Broker brokerServer = new Broker( "brokerServer");
         QueueBroker queueBrokerClient = new QueueBroker("queueBrokerClient", brokerClient);
         QueueBroker queueBrokerServer =  new QueueBroker("queueBrokerServer", brokerServer);
-        
-        
 
         // S E R V E R
 
@@ -40,7 +38,9 @@ public class testEchoServer {
             public void accepted(MessageQueue queue) {
 
                 System.out.println("... SERVER accepted ...");
+                queueBrokerServer.unbind(PORT);
                 queue.setListener(new MessageQueueListener(queue));
+
             }
 
             class MessageQueueListener implements MessageQueue.Listener{
@@ -64,6 +64,7 @@ public class testEchoServer {
                 @Override
                 public void closed() {
                     System.out.println("SERVER messageQueue Disconnected: ");  
+                    msgQueue.close();
                 }
             }
         }
@@ -88,11 +89,18 @@ public class testEchoServer {
         class clientConnectListener implements QueueBroker.ConnectListener{
             byte[] message = MESSAGE.getBytes();
             
-            class messageQueueListener implements MessageQueue.Listener{
+            class MessageQueueListener implements MessageQueue.Listener{
+
+            MessageQueue messageQueueClient;
+            
+            MessageQueueListener(MessageQueue messageQueue){
+                this.messageQueueClient = messageQueue;
+            }
 
             @Override
             public void received(byte[] msg) {
                 System.out.println("CLIENT Received: " + new String(msg, StandardCharsets.UTF_8));  
+                messageQueueClient.close();
                 EventPump.getInstance().kill();
             }
 
@@ -111,7 +119,8 @@ public class testEchoServer {
             @Override
             public void connected(MessageQueue msgQueue) {
                 System.out.println("... CLIENT connected ...");
-                msgQueue.setListener(new messageQueueListener());
+                queueBrokerClient.unbind(PORT);
+                msgQueue.setListener(new MessageQueueListener(msgQueue));
                 msgQueue.send(message, 0, message.length);
             }
 
@@ -122,7 +131,6 @@ public class testEchoServer {
             }
 
         }
-        EventPump.getInstance();
 
         System.out.println("... SERVER accepting ..." );
         queueBrokerServer.bind(PORT, new ServerAcceptListener());

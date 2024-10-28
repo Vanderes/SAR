@@ -7,19 +7,23 @@ import java.util.List;
 public class EventPump extends Thread {
     List<Runnable> pumpList;
     Object lock = new Object();
-    static EventPump instance;
     boolean dead = false;
+    private static volatile EventPump instance;
+
     private EventPump() {
-        this.pumpList = new LinkedList<Runnable>();
+        this.pumpList = new LinkedList<>();
     }
 
     public static EventPump getInstance() {
-        if (EventPump.instance == null) {
-            EventPump.instance = new EventPump();
-            EventPump.instance.start();
+        if (instance == null) {
+            synchronized (EventPump.class) {
+                if (instance == null) {
+                    instance = new EventPump();
+                    instance.start();
+                }
+            }
         }
-
-        return EventPump.instance;
+        return instance;
     }
 
     // public void run(), which runs the list of Runnable objects, one at a time. The method waits for a new Runnable object to be added to the list if the list is empty.
@@ -47,6 +51,7 @@ public class EventPump extends Thread {
     }
 
     public void kill() {
+        System.out.println("killing");;
         synchronized (lock) {
             dead = true;
             lock.notify();
