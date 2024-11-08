@@ -31,19 +31,13 @@ public class QueueBroker {
 
         @Override
         public void run(){
-            Channel channel;
+            Channel channelAccept;
             while(run){
                 try {
-                    channel = broker.accept(port);
-                    final Channel finalChannel = channel;
-                    EventPump.getInstance().post(new Runnable() {
-
-                        @Override
-                        public void run() {
-                            MessageQueue mq = new MessageQueue(finalChannel, broker);
-                            listener.accepted(mq);
-                        }
-                    });
+                    channelAccept = broker.accept(port);
+                    final Channel finalChannel = channelAccept;
+                    MessageQueue mq = new MessageQueue(finalChannel, broker);
+                    listener.accepted(mq);
                 } catch (IllegalStateException e) {
                     //nothing
                 } catch (InterruptedException e) {
@@ -82,17 +76,12 @@ public class QueueBroker {
 
         @Override
         public void run(){
-            Channel channel;
+            Channel channelConnect;
             try {
-                channel = broker.connect(name, port);
-                final Channel finalChannel = channel;
-                EventPump.getInstance().post(new Runnable() {
-                    @Override
-                    public void run() {
-                        MessageQueue mq = new MessageQueue(finalChannel, broker);
-                        listener.connected(mq);
-                    }}
-                );
+                channelConnect = broker.connect(name, port);
+                final Channel finalChannel = channelConnect; 
+                MessageQueue mq = new MessageQueue(finalChannel, broker);
+                listener.connected(mq);
             } catch (IllegalStateException e) {
                 listener.refused();
             } catch (InterruptedException e) {
