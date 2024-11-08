@@ -1,6 +1,7 @@
 package task1;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 
 public class Channel {
   
@@ -29,25 +30,32 @@ public class Channel {
       throw new IOException("channel is dangling");
     }
 
-    if (out.empty()){
-      synchronized (this) {
+    synchronized (this) {
+      if (out.empty()){
+
+        //System.out.println("reading, Waiting");
         try{wait(1000);}catch(InterruptedException e){};
       }
     }
 
-    int i = 0;
+    int i = offset;
     synchronized (this){
-      while(i < length) { 
+      while( i < length) { 
         try{
-            bytes[offset + i] = out.pull();
+            bytes[i] = out.pull();
             notifyAll();
+            // byte[] letter = {bytes[i]};
+            // System.out.println("reading" + i + new String(letter, StandardCharsets.UTF_8));
             i += 1;
         } catch (IllegalStateException e) {
-            return i;
+            notifyAll();
+            // System.out.println("reading exception " + (i - offset) + " " + length + " " + Thread.currentThread().getName());
+            return i - offset;
         }
       }
-    }
-    return i;
+    }            
+    // System.out.println("reading done " + (i - offset) + " " + length + " " + Thread.currentThread().getName());
+    return i - offset;
   };
 
   public int write(byte[] bytes, int offset, int length) throws IOException {
@@ -57,25 +65,30 @@ public class Channel {
     else if (rch.disconnected){
       throw new IOException("channel is dangling");
     }
-
-    if (in.full()){
-      synchronized (this) {
+    synchronized (this) {
+      if (in.full()){
+        // System.out.println("writing, Waiting");
         try{wait(1000);}catch(InterruptedException e){};
       }
     }
 
-    int i = 0;
+    int i = offset;
     synchronized (this){
       while(i < length) { 
         try{
-          in.push(bytes[offset + i]);
+          in.push(bytes[i]);
           notifyAll();
+          // byte[] letter = {bytes[offset + i]};
+          // System.out.println("writing" + i + new String(letter, StandardCharsets.UTF_8));
           i += 1;
         } catch (IllegalStateException e) {
-            return i;
+            // System.out.println("writing " + new String(bytes, StandardCharsets.UTF_8)+ " " + (i - offset) + " " + length + Thread.currentThread().getName());
+            notifyAll();
+            return i - offset;
         }
       }
     }
+    // System.out.println("writing done " + (i - offset) + " " + length + " " + Thread.currentThread().getName());
     return i;
 
 

@@ -1,4 +1,6 @@
 package task3;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 
 
@@ -8,7 +10,18 @@ import task1.*;
 
 public class testEchoServer {
     public static final int PORT = 800;
-    public static final String MESSAGE = "Hello world";
+    public static final String MESSAGE = "Hello ";
+    public static final String MESSAGE2 = "world, ";
+    public static final String MESSAGE3 = "0Ld! ";
+    public static final String MESSAGE4 = "woold";
+    public static final String ENDTOKENSTRING = "///";
+
+    public static final byte[] message = MESSAGE.getBytes();
+    public static final byte[] message2 = MESSAGE2.getBytes();
+    public static final byte[] message3 = MESSAGE3.getBytes();
+    public static final byte[] message4 = MESSAGE4.getBytes();
+    public static final byte[] ENDTOKEN = ENDTOKENSTRING.getBytes();
+    public static final byte[][] MESSAGES = {message, message2, message3, message4};
 
     public static void main(String[] args) throws InterruptedException{
         Broker brokerClient = new Broker( "brokerClient");
@@ -16,31 +29,14 @@ public class testEchoServer {
         QueueBroker queueBrokerClient = new QueueBroker("queueBrokerClient", brokerClient);
         QueueBroker queueBrokerServer =  new QueueBroker("queueBrokerServer", brokerServer);
 
-        // S E R V E R
-
-        /*
-        TaskEvent echoServer = new TaskEvent(queueBrokerServer, new Runnable() {
-
-            @Override
-            public void run() {
-                System.out.println("... SERVER running ...");
-                // TaskEvent currentTask = (TaskEvent)Thread.currentThread();
-                QueueBroker queueBroker = TaskEvent.getQueueBroker();
-
-                
-            }
-
-        }); 
-        */
-
         class ServerAcceptListener implements QueueBroker.AcceptListener{
             @Override
             public void accepted(MessageQueue queue) {
-
                 System.out.println("... SERVER accepted ...");
-                queueBrokerServer.unbind(PORT);
                 queue.setListener(new MessageQueueListener(queue));
-
+                if(!queueBrokerServer.unbind(PORT)){
+                    System.out.println("... SERVER unbind failed ...");
+                }
             }
 
             class MessageQueueListener implements MessageQueue.Listener{
@@ -52,84 +48,129 @@ public class testEchoServer {
 
                 @Override
                 public void received(byte[] msg) {
-                    System.out.println("SERVER Received: " + new String(msg, StandardCharsets.UTF_8));  
-                    msgQueue.send(msg, 0, msg.length);
+                    EventPump.getInstance().post(new Runnable(){
+                        @Override
+                        public void run(){
+                            System.out.println("SERVER Received: " + new String(msg, StandardCharsets.UTF_8));  
+                            msgQueue.send(msg, 0, msg.length);
+                        }
+                    });
                 }
 
                 @Override
                 public void sent(byte[] msg) {
-                    System.out.println("SERVER Sent: " + new String(msg, StandardCharsets.UTF_8));  
+                    EventPump.getInstance().post(new Runnable(){
+                        @Override
+                        public void run(){
+                            System.out.println("SERVER Sent: " + new String(msg, StandardCharsets.UTF_8));  
+
+                        }
+                    });
                 }
 
                 @Override
                 public void closed() {
                     System.out.println("SERVER messageQueue Disconnected: ");  
-                    msgQueue.close();
+                    EventPump.getInstance().kill();
                 }
             }
         }
 
-        // C L I E N T
-
-        /*
-        TaskEvent echoClient = new TaskEvent(queueBrokerClient, new Runnable(){ 
-            @Override
-            public void run(){
-                System.out.println("... CLIENT running");
-                byte[] message = MESSAGE.getBytes();
-                TaskEvent currentTask = (TaskEvent)Thread.currentThread();
-                QueueBroker queueBroker = currentTask.queueBroker;
-
-            }
-        });
-        */
-
-        
-
         class clientConnectListener implements QueueBroker.ConnectListener{
-            byte[] message = MESSAGE.getBytes();
+            ByteArrayOutputStream receivedBytes = new ByteArrayOutputStream();
+            private final clientConnectListener parentListener = this;
             
             class MessageQueueListener implements MessageQueue.Listener{
 
-            MessageQueue messageQueueClient;
-            
-            MessageQueueListener(MessageQueue messageQueue){
-                this.messageQueueClient = messageQueue;
-            }
+                MessageQueue messageQueueClient;
+                
+                MessageQueueListener(MessageQueue messageQueue){
+                    this.messageQueueClient = messageQueue;
+                }
 
-            @Override
-            public void received(byte[] msg) {
-                System.out.println("CLIENT Received: " + new String(msg, StandardCharsets.UTF_8));  
-                messageQueueClient.close();
-                EventPump.getInstance().kill();
-            }
+                @Override
+                public void received(byte[] msg) {
+                    EventPump.getInstance().post(new Runnable(){
+                        @Override
+                        public void run(){
+                            
+                            String receivedMessage = new String(msg, StandardCharsets.UTF_8);
+                            System.out.println("CLIENT Received: " + receivedMessage);  
+                        
 
-            @Override
-            public void sent(byte[] msg) {
-                System.out.println("CLIENT Sent: " + new String(msg, StandardCharsets.UTF_8));  
-            }
+                            if(receivedMessage.equals(ENDTOKENSTRING)){ 
+                                System.out.println("... CLIENT ENDTOKEN");
+                                ByteArrayOutputStream Verficiation = new ByteArrayOutputStream();
+                                for(byte[] message : MESSAGES){
+                                    try {
+                                        Verficiation.write(message);
+                                    } catch (IOException e) {
+                                        e.printStackTrace();
+                                    }
+                                }
+                                if(receivedBytes.toString().equals(Verficiation.toString())){
+                                    System.out.println("SUCCES:" + receivedBytes.toString());
+                                } else {
+                                    System.out.println("FAILED: " + receivedBytes.toString());
+                                }
+                                messageQueueClient.close();
+                                return;
+                            }
+                            try {
+                                receivedBytes.write(msg);
+                            } catch (IOException e) {
+                                e.printStackTrace();
+                            }
+                        }
+                    });
+                }
 
-            @Override
-            public void closed() {
-                System.out.println("CLIENT messageQueue Disconnected: ");  
-            }
+                @Override
+                public void sent(byte[] msg) {
+                    EventPump.getInstance().post(new Runnable(){
+                        @Override
+                        public void run(){
+                            System.out.println("CLIENT Sent: " + new String(msg, StandardCharsets.UTF_8));  
+                        }
+                    });
+                }
 
-        }
+                @Override
+                public void closed() {
+                    System.out.println("CLIENT messageQueue Disconnected: ");  
+                }
+
+            }
 
             @Override
             public void connected(MessageQueue msgQueue) {
-                System.out.println("... CLIENT connected ...");
-                queueBrokerClient.unbind(PORT);
-                msgQueue.setListener(new MessageQueueListener(msgQueue));
-                msgQueue.send(message, 0, message.length);
+                EventPump.getInstance().post(new Runnable(){
+                    @Override
+                    public void run(){
+                        System.out.println("... CLIENT connected ...");
+                        
+                        msgQueue.setListener(new MessageQueueListener(msgQueue));
+                        for (byte[] msg : MESSAGES) {
+                            msgQueue.send(msg, 0, msg.length);
+                        }
+                        msgQueue.send(ENDTOKEN, 0, ENDTOKEN.length);
+                        if(!queueBrokerClient.unbind(PORT)){
+                            System.out.println("... CLIENT unbind failed ...");
+                        }
+                    }
+                });
             }
 
             @Override
             public void refused() {
-                System.out.println("... CLIENT refused retry ... ");
-                queueBrokerClient.connect(brokerServer.getName(), PORT, this);
+                EventPump.getInstance().post(new Runnable(){
+                    @Override
+                    public void run(){
+                        System.out.println("... CLIENT refused retry ... ");
+                        queueBrokerClient.connect(brokerServer.getName(), PORT, parentListener);
+                    }
+                });
             }
-
         }
 
         System.out.println("... SERVER accepting ..." );
