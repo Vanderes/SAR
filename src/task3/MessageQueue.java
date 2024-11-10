@@ -5,13 +5,65 @@ import java.util.List;
 
 import task1.*;
 
+/**
+ * The MessageQueue class is responsible for managing the sending and receiving of messages
+ * over a specified channel. It handles the queuing of messages and the communication with a listener to notify about message 
+ * events such as sent, received, and closed.
+ * 
+ * <p>This class uses an internal queue to manage messages that are to be sent, and it 
+ * ensures that messages are sent in the order they are added to the queue. It also 
+ * provides functionality to receive messages from the channel and notify the listener 
+ * when a message is received.</p>
+ * 
+ * <p>The MessageQueue class contains nested classes for handling the sending and receiving 
+ * of messages, as well as a nested Message class to represent individual messages.</p>
+ * 
+ * <p>Usage example:</p>
+ * <pre>
+ * {@code
+ * Channel channel = ...;
+ * Broker broker = ...;
+ * MessageQueue messageQueue = new MessageQueue(channel, broker);
+ * messageQueue.setListener(new MessageQueue.Listener() {
+ *     @Override
+ *     public void received(byte[] msg) {
+ *         // Handle received message
+ *     }
+ * 
+ *     @Override
+ *     public void sent(byte[] msg) {
+ *         // Handle sent message
+ *     }
+ * 
+ *     @Override
+ *     public void closed() {
+ *         // Handle closed connection
+ *     }
+ * });
+ * 
+ * byte[] message = ...;
+ * messageQueue.send(message, 0, message.length);
+ * }
+ * </pre>
+ * 
+ * <p>Thread Safety:</p>
+ * <p>This class is thread-safe. Synchronization is used to ensure that the internal state 
+ * of the MessageQueue is consistent when accessed by multiple threads. The send and 
+ * close methods are synchronized to prevent concurrent modifications to the queue and 
+ * the channel. The Receiver and Sender nested classes also use synchronization to 
+ * ensure thread safety when reading from and writing to the channel.</p>
+ * 
+ * @see Channel
+ * @see Broker
+ * @see Listener
+ */
 public class MessageQueue {
-    Listener listener;
-    Channel channel;
-    List<Message> queue;
-    Receiver receiver;
+    private Listener listener;
+    private Channel channel;
+    private List<Message> queue;
+    private Receiver receiver;
     private Broker broker;
-    boolean sending = false;
+    private volatile boolean sending = false;
     
     class Message {
         byte[] bytes;
@@ -23,11 +75,7 @@ public class MessageQueue {
             this.length = length;
         }
     }
-    /**
-     * Convertit un entier en tableau d'octets.
-     * @param value L'entier à convertir.
-     * @return Un tableau de 4 octets représentant l'entier.
-     */
+
     private static byte[] intToByteArray(int value) {
         return new byte[] {
             (byte)(value >>> 24),
@@ -37,11 +85,6 @@ public class MessageQueue {
         };
     }
 
-    /**
-     * Convertit un tableau de 4 octets en entier.
-     * @param bytes Le tableau de 4 octets à convertir.
-     * @return L'entier correspondant au tableau d'octets.
-     */
     private static int byteArrayToInt(byte[] bytes) {
         if (bytes.length != 4) {
             throw new IllegalArgumentException("Le tableau doit contenir exactement 4 octets");
@@ -58,21 +101,22 @@ public class MessageQueue {
         final byte[] messageBytes;
         final int messageOffset;
         final int messageLength;
+        final MessageQueue parentMessageQueue;
 
-
-        Sender(Channel channel, Listener listener, byte[] bytes, int offset, int length){
+        Sender(Channel channel, Listener listener, byte[] bytes, int offset, int length, MessageQueue parentMessageQueue){
             this.channel = channel;
             this.messageBytes = bytes;
             this.messageOffset = offset;
             this.messageLength = length;
             this.listener = listener;
+            this.parentMessageQueue = parentMessageQueue;
         }
 
         @Override
         public void run(){
             byte[] messageLengthByte = intToByteArray(messageLength);
             int written = 0;
-            synchronized (this){
+            synchronized (channel){
                 while (written < 4){
                     try {
                         written += channel.write(messageLengthByte, written, 4);
@@ -83,25 +127,26 @@ public class MessageQueue {
                 }
 
                 int offset = messageOffset;
-                    while(offset < messageLength){
-                        try {
-                            offset += channel.write(messageBytes, offset, messageLength);
-                             
-                        } catch (IOException e) {
-                            listener.closed();
-                            return;
-                        };
+                while(offset < messageLength){
+                    try {
+                        offset += channel.write(messageBytes, offset, messageLength);
+                    } catch (IOException e) {
+                        listener.closed();
+                        return;
                     }
-            }
+                }
             
-            listener.sent(messageBytes);
-            if (!queue.isEmpty()){
-                Message nextMessage = queue.remove(0);
-                Sender sender = new Sender(channel, listener, nextMessage.bytes, nextMessage.offset, nextMessage.length);
-                task1.Task senderTask = new task1.Task(broker, sender);
-                senderTask.start();
-            } else {
-                sending = false;
+                listener.sent(messageBytes);
+                synchronized (queue) {
+                    if (!queue.isEmpty()){
+                        Message nextMessage = queue.remove(0);
+                        Sender sender = new Sender(channel, listener, nextMessage.bytes, nextMessage.offset, nextMessage.length, parentMessageQueue);
+                        task1.Task senderTask = new task1.Task(broker, sender);
+                        senderTask.start();
+                    } else {
+                        sending = false;
+                    }
+                }
             }
         }
     }
@@ -109,12 +154,15 @@ public class MessageQueue {
     class Receiver implements Runnable{
         final Channel channel;
         final Listener listener;
+        final MessageQueue parentMessageQueue;
+        volatile boolean alive = true;
 
-        Receiver(Channel channel, Listener listener){
+        Receiver(Channel channel, Listener listener, MessageQueue parentMessageQueue){
             this.channel = channel;
             this.listener  = listener;
+            this.parentMessageQueue = parentMessageQueue;
         }
-        boolean alive = true;
+
         @Override
         public void run() {
             byte[] lengthMessage;
@@ -122,26 +170,25 @@ public class MessageQueue {
             while(alive){
                 lengthMessage = intToByteArray(0);
                 read = 0;
-                synchronized (this){
+                synchronized (channel){
                     while (read < 4){
                         try{
                             read += channel.read(lengthMessage, read, 4);
                         } catch (IOException e) { 
                             listener.closed();
                             return;
-                        };
-                        
+                        }
                     }
                     int lengthMessageInt = byteArrayToInt(lengthMessage);
                     byte[] message = new byte[lengthMessageInt];
                     int offsetRead = 0;
                     while(offsetRead < lengthMessageInt){
                         try{
-                        offsetRead += channel.read(message, offsetRead, lengthMessageInt);
+                            offsetRead += channel.read(message, offsetRead, lengthMessageInt);
                         } catch (IOException e) { 
                             listener.closed();
                             return;
-                        };
+                        }
                     }
                     if(alive){
                         listener.received(message);
@@ -149,13 +196,12 @@ public class MessageQueue {
                 }
             }
         }
-        
     }
     
     public MessageQueue(Channel channel, Broker broker){
         this.channel = channel;
         this.broker = broker;
-        this.queue = new LinkedList<Message>();
+        this.queue = new LinkedList<>();
     }
 
     public interface Listener {
@@ -164,9 +210,9 @@ public class MessageQueue {
         void closed();
     }
 
-    public void setListener(Listener l){
+    public synchronized void setListener(Listener l){
         this.listener = l;
-        receiver = new Receiver(channel, this.listener);
+        receiver = new Receiver(channel, this.listener, this);
         task1.Task receiverTask = new task1.Task(broker, receiver);
         receiverTask.start();
     }
@@ -176,27 +222,28 @@ public class MessageQueue {
         int offsetCopy = offset;
         int lengthCopy = length;
         System.arraycopy(message, offset, messageCopy, offsetCopy, lengthCopy);
-        if (channel.disconnected){
-            return false;
-        } else if(sending){
-            Message messageObj = new Message(messageCopy, offsetCopy, lengthCopy);
-            queue.add(messageObj);
-        } else{
-            Sender sender = new Sender(channel, listener, messageCopy, offsetCopy, lengthCopy);
-            task1.Task senderTask = new task1.Task(broker, sender);
-            senderTask.start();
-            sending = true; 
+        synchronized (queue) {
+            if (channel.disconnected){
+                return false;
+            } else if(sending){
+                Message messageObj = new Message(messageCopy, offsetCopy, lengthCopy);
+                queue.add(messageObj);
+            } else{
+                Sender sender = new Sender(channel, listener, messageCopy, offsetCopy, lengthCopy, this);
+                task1.Task senderTask = new task1.Task(broker, sender);
+                senderTask.start();
+                sending = true; 
+            }
         }
         return true;
     }
 
-    void close(){
+    public synchronized void close(){
         receiver.alive = false;
         channel.disconnect();
     }
 
-    boolean closed(){
+    public synchronized boolean closed(){
         return channel.disconnected;
-    };
+    }
 }
-

@@ -4,6 +4,48 @@ import java.util.HashMap;
 
 import task1.*;
 
+/**
+ * The QueueBroker class is responsible for managing connections and message queues
+ * between different brokers. It provides methods to bind to a port and accept connections,
+ * as well as to connect to a remote broker.
+ * 
+ * <p>This class contains two inner classes, Acceptor and Connector, which handle the 
+ * acceptance and connection of channels respectively. It also defines two interfaces, 
+ * AcceptListener and ConnectListener, for handling events related to acceptance and 
+ * connection of message queues.</p>
+ * 
+ * <p>Usage example:</p>
+ * <pre>
+ * {@code
+ * Broker broker = new Broker();
+ * QueueBroker queueBroker = new QueueBroker("QueueBrokerName", broker);
+ * 
+ * queueBroker.bind(8080, new QueueBroker.AcceptListener() {
+ *     @Override
+ *     public void accepted(MessageQueue queue) {
+ *         // Handle accepted connection
+ *     }
+ * });
+ * 
+ * queueBroker.connect("RemoteBrokerName", 9090, new QueueBroker.ConnectListener() {
+ *     @Override
+ *     public void connected(MessageQueue queue) {
+ *         // Handle successful connection
+ *     }
+ * 
+ *     @Override
+ *     public void refused() {
+ *         // Handle refused connection
+ *     }
+ * });
+ * }
+ * </pre>
+ * 
+ * @see Broker
+ * @see Channel
+ * @see MessageQueue
+ * @see task1.Task
+ */
 public class QueueBroker {
     Broker broker;
     String name;
@@ -43,17 +85,6 @@ public class QueueBroker {
                 } catch (InterruptedException e) {
                     //nothing
                 }
-                
-
-                // Event event = new Event(((TaskEvent)Thread.currentThread()), new Runnable() {
-                //     MessageQueue mq = new MessageQueue();
-
-                //     @Override
-                //     public void run() {
-                //         listener.accepted(mq);
-                //     }}
-                // );
-                
                 
             }
 

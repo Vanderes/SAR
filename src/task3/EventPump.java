@@ -1,3 +1,38 @@
+/**
+ * The EventPump class is a singleton that extends Thread and is responsible for running a list of Runnable objects, one at a time.
+ * Only one instance of EventPump can exist at a time.
+ * 
+ * <p>This class provides methods to post new Runnable events to the list and to terminate the event pump.</p>
+ * 
+ * <p>Usage:</p>
+ * <pre>
+ * {@code
+ * EventPump pump = EventPump.getInstance();
+ * pump.post(() -> System.out.println("Hello, World!"));
+ * pump.kill();
+ * }
+ * </pre>
+ * 
+ * <p>Thread Safety:</p>
+ * <p>This class uses synchronization to ensure thread safety when accessing the list of Runnable objects and the singleton instance.</p>
+ * 
+ * <p>Methods:</p>
+ * <ul>
+ * <li>{@link #getInstance()} - Returns the singleton instance of EventPump, creating it if necessary.</li>
+ * <li>{@link #run()} - Runs the list of Runnable objects, one at a time. Waits for new Runnable objects if the list is empty.</li>
+ * <li>{@link #post(Runnable)} - Adds a new Runnable event to the list.</li>
+ * <li>{@link #kill()} - Terminates the event pump.</li>
+ * </ul>
+ * 
+ * <p>Fields:</p>
+ * <ul>
+ * <li>{@code pumpList} - The list of Runnable objects to be executed.</li>
+ * <li>{@code lock} - The lock object used for synchronization.</li>
+ * <li>{@code dead} - A flag indicating whether the event pump should terminate.</li>
+ * <li>{@code instance} - The singleton instance of EventPump.</li>
+ * </ul>
+ */
+
 package task3;
 
 import java.util.LinkedList;
