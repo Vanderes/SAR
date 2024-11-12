@@ -112,6 +112,7 @@ public class QueueBroker {
                 channelConnect = broker.connect(name, port);
                 final Channel finalChannel = channelConnect; 
                 MessageQueue mq = new MessageQueue(finalChannel, broker);
+                connectorMap.remove(port);
                 listener.connected(mq);
             } catch (IllegalStateException e) {
                 listener.refused();

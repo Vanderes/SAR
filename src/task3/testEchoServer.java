@@ -154,9 +154,6 @@ public class testEchoServer {
                             msgQueue.send(msg, 0, msg.length);
                         }
                         msgQueue.send(ENDTOKEN, 0, ENDTOKEN.length);
-                        if(!queueBrokerClient.unbind(PORT)){
-                            System.out.println("... CLIENT unbind failed ...");
-                        }
                     }
                 });
             }
